@@ -1,16 +1,13 @@
 using Kiselev.UserDbTestTask.Data.Users;
 using Kiselev.UserDbTestTask.DataBase;
+using Kiselev.UserDbTestTask.Repository.User;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddDbContext<UserDb>(options =>
-{
-    options.UseSqlite(builder.Configuration.GetConnectionString("Sqlite"));
-});
+RegisterServices(builder.Services);
 
 var app = builder.Build();
 
-// проверка что ДБ создастся при разработке
 if (app.Environment.IsDevelopment())
 {
     using var scope = app.Services.CreateScope();
@@ -18,45 +15,50 @@ if (app.Environment.IsDevelopment())
     db.Database.EnsureCreated();
 }
 
+app.MapGet("/users", async (IUserRepository repository) => 
+    Results.Ok(await repository.GetUsersAsync()));
 
-app.MapGet("/users", async (UserDb db) => await db.Users.ToListAsync());
-
-app.MapGet("/users/{id}", async (int id, UserDb db) => 
-    await db.Users.FirstOrDefaultAsync(u => u.Id == id) is UserDTO userDTO
-        ? Results.Ok(userDTO)
+app.MapGet("/users/{id}", async (int id, IUserRepository repository) => 
+    await repository.GetUserAsync(id) is UserModel userModel
+        ? Results.Ok(userModel)
         : Results.NotFound());
 
-app.MapPost("/users", async ([FromBody] UserDTO userDTO, UserDb db) =>
+app.MapPost("/users", async ([FromBody] UserDTO userDTO, IUserRepository repository) =>
 {
-    db.Users.Add(userDTO);
-    await db.SaveChangesAsync();
+    await repository.AddUserAsync(userDTO);
+    await repository.SaveAsync();
     return Results.Created($"/users/{userDTO.Id}", userDTO);
 });
 
-app.MapPut("/users", async ([FromBody] UserDTO userDTO, UserDb db) =>
+app.MapPut("/users", async ([FromBody] UserDTO userDTO, IUserRepository repository) =>
 {
-    var userFromDb = await db.Users.FindAsync(new object[] { userDTO.Id });
-    if(userFromDb == null)
+    if(await repository.TryUpdateUserAsync(userDTO) == false)
         return Results.NotFound();
-
-    userFromDb.CopyFrom(userDTO);
-
-    await db.SaveChangesAsync();
+      
+    await repository.SaveAsync();
     return Results.NoContent();
 });
 
 
-app.MapDelete("/users/{id}", async (int id, UserDb db) =>
+app.MapDelete("/users/{id}", async (int id, IUserRepository repository) =>
 {
-    var userFromDb = await db.Users.FindAsync(new object[] { id });
-    if (userFromDb == null)
+    if (await repository.TryDeleteUserAsync(id) == false)
         return Results.NotFound();
 
-    db.Remove(userFromDb);
-    await db.SaveChangesAsync();
+    await repository.SaveAsync();
     return Results.NoContent();
 });
 
 app.UseHttpsRedirection();
 
 app.Run();
+
+void RegisterServices(IServiceCollection services)
+{
+    services.AddDbContext<UserDb>(options =>
+    {
+        options.UseSqlite(builder.Configuration.GetConnectionString("Sqlite"));
+    });
+
+    services.AddScoped<IUserRepository, UserRepository>();
+}
