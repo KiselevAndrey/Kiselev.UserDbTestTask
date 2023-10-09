@@ -15,29 +15,41 @@ namespace Kiselev.UserDbTestTask.Repository.User
         ~UserRepository() =>
             Dispose(false);
 
-        public Task<List<UserModel>> GetUsersAsync()
+        public Task<List<UserDTO>> GetUsersAsync() =>
+            _userDb.Users.ToListAsync();
+
+        public async Task<UserDTO?> GetUserAsync(int userId) =>
+            await _userDb.Users.FindAsync(new object[] {userId});
+
+        public async Task<Result> TryAddUserAsync(UserDTO user)
         {
-            var usersDTO = _userDb.Users;
-            var models = new List<UserModel>();
-            foreach (var user in usersDTO)
-                models.Add(user.MapToModel());
+            if (string.IsNullOrEmpty(user.Name))
+                return new Result(false, "User's name is null or Empty");
+            if (string.IsNullOrEmpty(user.Email))
+                return new Result(false, "User's email is null or Empty");
+            if (user.Age < 1)
+                return new Result(false, "User's age is less than 1");
 
-            return Task.FromResult(models);
-        }
+            var usersDTO = await _userDb.Users.ToListAsync();
+            bool emailIsUniq = true;
+            for (int i = 0; i < usersDTO.Count; i++)
+            {
+                if (usersDTO[i].Email == user.Email)
+                {
+                    emailIsUniq = false;
+                    break;
+                }
+            }
 
-        public async Task<UserModel?> GetUserAsync(int userId)
-        {
-            var userDTO = await _userDb.Users.FindAsync(new object[] {userId});
-            return userDTO?.MapToModel();
-        }
-
-        public async Task AddUserAsync(UserModel user) =>
-            await _userDb.Users.AddAsync(user.MapToDTO());
-        public async Task AddUserAsync(UserDTO user) =>
+            if (emailIsUniq == false)
+                return new Result(false, "User's email is already exist");
+            
+            user.Id = 0;
             await _userDb.Users.AddAsync(user);
 
-        public async Task<bool> TryUpdateUserAsync(UserModel user) =>
-            await TryUpdateUserAsync(user.MapToDTO());
+            return new Result(true);
+        }
+
         public async Task<bool> TryUpdateUserAsync(UserDTO user)
         {
             var userDto = await _userDb.Users.FindAsync(new object[] { user.Id });

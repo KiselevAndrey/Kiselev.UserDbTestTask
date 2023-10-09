@@ -6,14 +6,14 @@
         public string Name { get; set; } = string.Empty;
         public int Age { get; set; }
         public string Email { get; set; } = string.Empty;
-        public int RoleValue { get; set; }
+        public int Roles { get; set; }
 
         public void CopyFrom(UserDTO other)
         {
             Name = other.Name;
             Age = other.Age;
             Email = other.Email;
-            RoleValue = other.RoleValue;
+            Roles = other.Roles;
         }
     }
 }
