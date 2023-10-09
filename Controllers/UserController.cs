@@ -27,11 +27,9 @@ namespace Kiselev.UserDbTestTask.Controllers
                 var result = await repository.TryAddUserAsync(userDTO);
                 if (result.IsSuccess == false)
                     return Results.BadRequest(result.Description);
-                else
-                {
-                    await repository.SaveAsync();
-                    return Results.Created($"/users/{userDTO.Id}", userDTO);
-                }
+
+                await repository.SaveAsync();
+                return Results.Created($"/users/{userDTO.Id}", userDTO);
             })
                 .Accepts<UserDTO>("application/json")
                 .Produces<UserDTO>(StatusCodes.Status201Created)
@@ -41,15 +39,16 @@ namespace Kiselev.UserDbTestTask.Controllers
 
             app.MapPut("/users", async ([FromBody] UserDTO userDTO, IUserRepository repository) =>
             {
-                if (await repository.TryUpdateUserAsync(userDTO) == false)
-                    return Results.NotFound($"User with id ({userDTO.Id}) not found");
+                var result = await repository.TryUpdateUserAsync(userDTO);
+                if (result.IsSuccess == false)
+                    return Results.BadRequest(result.Description);
 
                 await repository.SaveAsync();
                 return Results.NoContent();
             })
                 .Accepts<UserDTO>("application/json")
                 .Produces(StatusCodes.Status200OK)
-                .Produces(StatusCodes.Status404NotFound)
+                .Produces(StatusCodes.Status400BadRequest)
                 .WithName("Update user")
                 .WithTags("Updaters");
 

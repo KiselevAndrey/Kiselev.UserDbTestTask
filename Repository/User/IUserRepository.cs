@@ -7,7 +7,7 @@ namespace Kiselev.UserDbTestTask.Repository.User
         Task<List<UserDTO>> GetUsersAsync();
         Task<UserDTO?> GetUserAsync(int userId);
         Task<Result> TryAddUserAsync(UserDTO user);
-        Task<bool> TryUpdateUserAsync(UserDTO user);
+        Task<Result> TryUpdateUserAsync(UserDTO user);
         Task<bool> TryDeleteUserAsync(int userId);
 
         Task SaveAsync();
