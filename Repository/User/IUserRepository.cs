@@ -8,7 +8,9 @@ namespace Kiselev.UserDbTestTask.Repository.User
         Task<UserDTO?> GetUserAsync(int userId);
         Task<Result> TryAddUserAsync(UserDTO user);
         Task<Result> TryUpdateUserAsync(UserDTO user);
+        Task<Result> TryAddNewRoleAsync(int userId, Roles role);
         Task<bool> TryDeleteUserAsync(int userId);
+        public Task<bool> TryDeleteUsersRoleAsync(int userId);
 
         Task SaveAsync();
     }

@@ -47,6 +47,19 @@ namespace Kiselev.UserDbTestTask.Repository.User
             return new Result(true);
         }
 
+        public async Task<Result> TryAddNewRoleAsync(int userId, Roles role)
+        {
+            var userDto = await _userDb.Users.FindAsync(new object[] { userId });
+            if (userDto == null)
+                return new Result(false, $"User with id ({userId}) not found");
+
+            if (RoleExtension.CheckRoleInMask(role, userDto.RoleMask))
+                return new Result(false, $"User with id ({userId}) already has role ({role})");
+
+            userDto.RoleMask += RoleExtension.ToMask(role);
+            return new Result(true);
+        }
+
         public async Task<bool> TryDeleteUserAsync(int userId)
         {
             var userDto = await _userDb.Users.FindAsync(new object[] { userId });
@@ -54,6 +67,16 @@ namespace Kiselev.UserDbTestTask.Repository.User
                 return false;
 
             _userDb.Users.Remove(userDto);
+            return true;
+        }
+
+        public async Task<bool> TryDeleteUsersRoleAsync(int userId)
+        {
+            var userDto = await _userDb.Users.FindAsync(new object[] { userId });
+            if (userDto == null)
+                return false;
+
+            userDto.RoleMask = 0;
             return true;
         }
 
@@ -107,6 +130,11 @@ namespace Kiselev.UserDbTestTask.Repository.User
                 return new Result(false, "User's email is null or Empty");
             if (user.Age < 1)
                 return new Result(false, "User's age is less than 1");
+            if (RoleExtension.CheckValueInMask(user.RoleMask) == false)
+            {
+                var (min, max) = RoleExtension.GetMaskRange();
+                return new Result(false, $"User's role ({user.RoleMask}) is less than {min} or more than {max}");
+            }
 
             return new Result(true);
         }
